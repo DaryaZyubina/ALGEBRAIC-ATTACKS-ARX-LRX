@@ -237,6 +237,20 @@ public: /*
 
         file.close();
     }
+
+    vector <vector <int>> get_system() {
+        vector<vector <int>> result;
+        vector<int> v;
+        for(int i = 0; i < height; i++) {
+            result.push_back(v);
+            for(int j = 0; j < length; j++) {
+                if(m[i][j]) {
+                   result[i].push_back(j);
+                }
+            }
+        }
+        return result;
+    }
 };
 
 int main() {
