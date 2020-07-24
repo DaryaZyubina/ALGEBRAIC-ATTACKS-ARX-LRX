@@ -74,7 +74,7 @@ public: /*
         for(int i = 0; i < height; i++) {
             m.push_back(v);
             for(int j = 0; j < mtrx[i].size(); j++) {
-                m[i][j] = 1;
+                m[i][mtrx[i][j]] = 1;
             }
         }
     }
@@ -255,7 +255,7 @@ public: /*
 
 int main() {
     try {
-        Equation_system M(""); // SOURCE PATH
+        //Equation_system M("C:\\Users\\Semen\\Documents\\Study\\Ctyptoschool\\Programs\\Simon_m1_T4-XL.txt"); // SOURCE PATH
         //M.gauss_elim();
         //M.write_system(""); // DESTINATION PATH
 
