@@ -870,12 +870,20 @@ namespace F2Pol {
             eval_id += 1;
 
             for (int i = 0; i < terms.size(); i++) {
+                if (terms[i] == one_term) {
+                    assert(i == (int)terms.size() - 1 && (int)terms.size() == (int)solution.size() + 1);
+                    continue;
+                }
                 if (terms[i]->var_ids.size() == 1) {
                     temp_values[terms[i]->var_ids[0]] = solution[i] == 1 ? one_pol : zero_pol;
                 }
             }
             bool ok = true;
             for (int i = 0; i < terms.size(); i++) {
+                if (terms[i] == one_term) {
+                    assert(i == (int)terms.size() - 1 && (int)terms.size() == (int)solution.size() + 1);
+                    continue;
+                }
                 Polynomial value = eval_term(terms[i], true);
                 if (value.terms.size() == 0) {
                     if (solution[i] != 0) {
@@ -992,7 +1000,7 @@ void Simon_XL() {
     cout << "\n";
 
     cout << "\n";
-    cout << "Overall attack time: " << clock() - start << "\n";
+    cout << "Overall attack time: " << (clock() - start) / CLOCKS_PER_SEC << "sec" <<"\n";
 }
 
 
