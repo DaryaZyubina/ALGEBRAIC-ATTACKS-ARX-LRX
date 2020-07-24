@@ -820,13 +820,14 @@ namespace F2Pol {
                 }
             }
         }
-        int num_columns = (int)diff_terms.size();
+        int num_columns = (int)terms.size();
         if (append_val_column) {
             for (int i = 0; i < n; i++) {
                 if (val_column[i] == 1) {
                     compressed_matrix[i].push_back(num_columns);
                 }
             }
+            terms.emplace_back(one_term);
             num_columns++;
         }
         if (need_full_matrix) {
@@ -954,6 +955,12 @@ void Simon_XL() {
     }
     cout << "\n";
     cout << "\n";
+
+    // test anti_linearize
+    /*equations = F2Pol::anti_linearize(terms, matrix);
+    for (auto it : equations) {
+        cout << it << "\n";
+    }*/
 
     // solve linear system of equations
     Equation_system eq_system(matrix, num_columns, matrix.size());
