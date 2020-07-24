@@ -66,6 +66,19 @@ public: /*
         file.close();
     }
 
+    Equation_system(vector<vector <int>> &mtrx, int l, int h) {
+        length = l;
+        height = h;
+
+        vector <bool> v(length);
+        for(int i = 0; i < height; i++) {
+            m.push_back(v);
+            for(int j = 0; j < mtrx[i].size(); j++) {
+                m[i][j] = 1;
+            }
+        }
+    }
+
     void print() {
         cout<<"Variables: "<<length-1<<"\nEquations = "<<height<<"\nCombinations = 2^"<<length-1-height<<'\n';
         for(int i = 0; i < height; i++) {
