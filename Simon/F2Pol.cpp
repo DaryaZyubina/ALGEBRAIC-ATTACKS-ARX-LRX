@@ -379,7 +379,7 @@ namespace F2Pol {
 
         Polynomial(vector<Term *> _terms, bool need_clean = true) {
             if (need_clean) {
-                sort(_terms.begin(), _terms.end(), [](Term *t1, Term *t2) { return t1->id < t2->id; });
+                sort(_terms.begin(), _terms.end(), [](Term *t1, Term *t2) { return *t1 < *t2; });
                 for (Term *t : _terms) {
                     int sz = (int) terms.size();
                     if (t == zero_term) {
@@ -442,6 +442,15 @@ namespace F2Pol {
 
     bool is_one_pol(const Polynomial &a) {
         return a.terms.size() == 1 && a.terms[0] == one_term;
+    }
+
+    bool is_linear_pol(const Polynomial &a) {
+        for (Term* t : a.terms) {
+            if (t->var_ids.size() > 1) {
+                return false;
+            }
+        }
+        return true;
     }
 
 
@@ -833,6 +842,26 @@ namespace F2Pol {
         return num_columns;
     }
 
+    vector<Polynomial> anti_linearize(const vector<Term*> &terms, const vector<vector<int> > &matrix, bool is_full_matrix=false) {
+        vector<Polynomial> res;
+        for (const vector<int> &row : matrix) {
+            vector<Term*> term_row = {};
+            if (is_full_matrix) {
+                for (int j = 0; j < row.size(); j++) {
+                    if (row[j] == 1) {
+                        term_row.push_back(terms[j]);
+                    }
+                }
+            } else {
+                for (int p : row) {
+                    term_row.push_back(terms[p]);
+                }
+            }
+            res.emplace_back(Polynomial(term_row));
+        }
+        return res;
+    }
+
     vector<vector<int> > remove_wrong_solutions(const vector<vector<int> >& solutions, const vector<Term*>& terms) {
         vector<vector<int> > res;
         for (vector<int> solution : solutions) {
@@ -886,6 +915,7 @@ void Simon_XL() {
         cout << *F2Pol::all_vars[vars[i]] << (i < (int)vars.size() - 1 ? ";" : "\n");
     }
     for (auto it : equations) {
+        // cout << it << "   " << F2Pol::is_linear_pol(it) << "\n";
         cout << it << "\n";
     }
     cout << "\n";
