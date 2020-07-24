@@ -79,7 +79,7 @@ public: /*
 
     void gauss_elim() {
         for(int k = 0, l = 0; l < length-1 && k < height;) {
-            if(l % 1000 == 0) cout << l << " columns\n";
+            //if(l % 1000 == 0) cout << l << " columns\n";
             if(!m[k][l]) {
                 for(int q = k+1; q < height; q++) {
                     if(m[q][l]) {
@@ -197,14 +197,44 @@ public: /*
 
         file.close();
     }
+
+    void write_system(string dst) {
+        ofstream file(dst);
+        if(!file.is_open()) {
+            throw("Failed to open a write file!");
+        }
+
+        file << length << ' ' << height << '\n';
+
+        for(int i = 0; i < height; i++) {
+            int counter = 0;
+            for(int j = 0; j < length; j++) {
+                if(m[i][j]) {
+                    counter++;
+                }
+            }
+            file << counter << ' ';
+            for(int j = 0, written = 0; written < counter && j < length; j++) {
+                if(m[i][j]) {
+                    file << j << ' ';
+                    written++;
+                }
+            }
+            file << '\n';
+        }
+
+        file.close();
+    }
 };
 
 int main() {
     try {
-        Equation_system M("C:\\Users\\Semen\\Documents\\Study\\Ctyptoschool\\Programs\\sample2.txt");
-        M.find_solution();
-        //M.print_solution();
-        M.write_solution("C:\\Users\\Semen\\Documents\\Study\\Ctyptoschool\\Programs\\answer.txt");
+        Equation_system M(""); // SOURCE PATH
+        //M.gauss_elim();
+        //M.write_system(""); // DESTINATION PATH
+
+        //M.find_solution();
+        //M.write_solution("C:\\Users\\Semen\\Documents\\Study\\Ctyptoschool\\Programs\\answer.txt");
     } catch(const char* msg) {
         cout << "Error: " << msg << '\n';
     } catch(...) {
