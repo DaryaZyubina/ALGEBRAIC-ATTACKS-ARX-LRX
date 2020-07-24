@@ -29,9 +29,10 @@ vector <vector<int>> elimlin(/*system source*/) {
             substitute v in all equations in D and in the current system
             delete the current linear equation from the system
     }
-    if there are no linear equations
-    transform D into a vector<vector<int>>
-    return it
+    if there are no linear equations {
+        transform D into a vector<vector<int>>
+        return it
+        }
     jump to (*)
      */
 }
