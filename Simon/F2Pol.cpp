@@ -4,7 +4,7 @@
 #include <map>
 #include <set>
 #include <fstream>
-#include <math.h>
+#include <cmath>
 
 using namespace std;
 
@@ -304,6 +304,20 @@ namespace F2Pol {
         Term(int _id, vector<int> _var_ids = {}) {
             id = _id;
             var_ids = _var_ids;
+        }
+
+        int degree() {
+            if (var_ids.size() >= 2) {
+                return var_ids.size();
+            } else if (var_ids.size() == 1) {
+                if (var_ids[0] == zero || var_ids[0] == one) {
+                    return 0;
+                } else {
+                    return 1;
+                }
+            } else {
+                assert(false);
+            }
         }
     };
 
@@ -814,6 +828,23 @@ namespace F2Pol {
                         diff_terms[t->id] = (int)terms.size();
                         terms.push_back(t);
                     }
+                }
+            }
+        }
+        sort(terms.begin(), terms.end(), [](Term* t1, Term* t2) {
+            int d1 = t1->degree(), d2 = t2->degree();
+            if (d1 != d2) {
+                return d1 > d2;
+            } else {
+                return t1->id < t2->id;
+            }
+        });
+        for (int i = 0; i < terms.size(); i++) {
+            diff_terms[terms[i]->id] = i;
+        }
+        for (int i = 0; i < n; i++) {
+            for (Term* t : equations[i].terms) {
+                if (t->id != zero_term->id && t->id != one_term->id) {
                     compressed_matrix[i].push_back(diff_terms[t->id]);
                 } else if (t->id == one_term->id) {
                     val_column[i] ^= 1;
@@ -907,30 +938,93 @@ namespace F2Pol {
         return res;
     }
 
+
+    vector<Polynomial> parse_equations_from_file(const string& file_name) {
+        ifstream fin;
+        fin.open(file_name);
+        string s;
+        vector<Polynomial> equations;
+        map<string, int> parsed_vars;
+        while (getline(fin, s)) {
+            vector<Term*> terms;
+            parsed_vars["0"] = zero;
+            parsed_vars["1"] = one;
+            string cur_var_name;
+            vector<int> cur_term;
+            auto append_char = [&](char c) {
+                cur_var_name += c;
+            };
+            auto end_var_name = [&]() {
+                if (cur_var_name.size() == 0) {
+                    return;
+                }
+                if (parsed_vars.find(cur_var_name) == parsed_vars.end()) {
+                    parsed_vars[cur_var_name] = add_variable(cur_var_name);
+                }
+                cur_term.push_back(parsed_vars[cur_var_name]);
+                cur_var_name = "";
+            };
+            auto end_term = [&]() {
+                end_var_name();
+                if (cur_term.size() == 0) {
+                    return;
+                }
+                terms.push_back(add_term(cur_term));
+                cur_term.clear();
+            };
+            for (int i = 0; i < s.size(); i++) {
+                if (s[i] == ' ' || s[i] == '\n' || s[i] == '\r' || s[i] == '\t') {
+                    end_var_name();
+                } else if (s[i] == '+' || s[i] == '=') {
+                    end_term();
+                } else if (s[i] == '*') {
+                    end_var_name();
+                } else {
+                    append_char(s[i]);
+                }
+            }
+            end_term();
+            equations.emplace_back(Polynomial(terms));
+        }
+        return equations;
+    }
 }
 
 
-void Simon_XL() {
-    // get all equations
-    auto equations = F2Pol::get_equations(false);
-
-    clock_t start = clock();
-
-    // get all variables in these equations
-    auto vars = F2Pol::get_all_equation_vars(equations, false);
-
-    // print equations to be passed to a anf2cnf converter
+void print_equations_for_sat(const vector<F2Pol::Polynomial>& equations) {
+    vector<int> vars = F2Pol::get_all_equation_vars(equations, false);
     for (int i = 0; i < vars.size(); i++) {
         cout << *F2Pol::all_vars[vars[i]] << (i < (int)vars.size() - 1 ? ";" : "\n");
     }
-    for (auto it : equations) {
-        // cout << it << "   " << F2Pol::is_linear_pol(it) << "\n";
+    for (const auto& it : equations) {
         cout << it << "\n";
     }
     cout << "\n";
+}
+
+
+vector<vector<int> > read_solutions_from_file(const string& file_name, int num_variables) {
+    ifstream fin;
+    fin.open(file_name);
+    vector<vector<int> > solutions;
+    int tmp;
+    while (fin >> tmp) {
+        solutions.emplace_back(vector<int> ());
+        solutions.back().push_back(tmp);
+        for (int i = 0; i < num_variables - 1; i++) {
+            fin >> tmp;
+            solutions.back().push_back(tmp);
+        }
+    }
+    return solutions;
+}
+
+
+void XL_attack(vector<F2Pol::Polynomial> equations) {
+    clock_t start = clock();
 
     // print some info
-    F2Pol::get_all_equation_vars(equations, true);
+    vector<int> vars = F2Pol::get_all_equation_vars(equations, true);
 
     // apply XL
     F2Pol::multiply_by_variables(equations, vars);
@@ -943,6 +1037,7 @@ void Simon_XL() {
     vector<int> val_column;
     vector<F2Pol::Term*> terms;
     int num_columns = F2Pol::linearize(equations, matrix, val_column, terms, false, true);
+
     cout << matrix.size() << " " << num_columns << "\n";
     for (int i = 0; i < min(10, (int)matrix.size()); i++) {
         cout << matrix[i].size() << " ";
@@ -964,34 +1059,15 @@ void Simon_XL() {
     cout << "\n";
     cout << "\n";
 
-    // test anti_linearize
-    /*equations = F2Pol::anti_linearize(terms, matrix);
-    for (auto it : equations) {
-        cout << it << "\n";
-    }*/
-
     // solve linear system of equations
     Equation_system eq_system(matrix, num_columns, matrix.size());
     eq_system.find_solution();
     vector<vector<int> > solutions = eq_system.get_solutions();
-    /*// reading all solutions
-    ifstream fin;
-    fin.open("solutions.txt");
-    vector<vector<int> > solutions;
-    int tmp;
-    while (fin >> tmp) {
-        solutions.emplace_back(vector<int> ());
-        solutions.back().push_back(tmp);
-        for (int i = 0; i < (int)terms.size() - 1; i++) {
-            fin >> tmp;
-            solutions.back().push_back(tmp);
-        }
-    }
-    fin.close();*/
     cout << "\n";
+
     solutions = F2Pol::remove_wrong_solutions(solutions, terms);
     cout << "Found " << solutions.size() << " solutions\n";
-    for (auto it : solutions) {
+    for (const auto& it : solutions) {
         for (int x : it) {
             cout << x << " ";
         }
@@ -1005,7 +1081,13 @@ void Simon_XL() {
 
 
 int main() {
-    Simon_XL();
+    // for Simon
+    vector<F2Pol::Polynomial> equations = F2Pol::get_equations(false);
+    // for Speck
+    // vector<F2Pol::Polynomial> equations = F2Pol::parse_equations_from_file("speck.txt");
+
+    XL_attack(equations);
+
     return 0;
 }
 
