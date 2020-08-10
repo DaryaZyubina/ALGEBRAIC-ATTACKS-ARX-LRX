@@ -939,7 +939,45 @@ namespace F2Pol {
     }
 
 
-    vector<Polynomial> parse_equations_from_file(const string& file_name) {
+    string change_name(const string& s) {
+        if (s == "0" || s == "1") {
+            return s;
+        }
+        char letter = 0;
+        string cur_num;
+        vector<string> nums;
+        for (char c : s) {
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+                assert(letter == 0);
+                letter = c;
+            } else if (c >= '0' && c <= '9') {
+                cur_num += c;
+            } else {
+                if (cur_num.size() > 0) {
+                    nums.push_back(cur_num);
+                    cur_num = "";
+                }
+            }
+        }
+        assert(letter != 0);
+        string res;
+        res += letter;
+        if (nums.size() > 0) {
+            res += '[';
+            for (int i = 0; i < nums.size(); i++) {
+                res += nums[i];
+                if (i + 1 < nums.size()) {
+                    res += ',';
+                } else {
+                    res += ']';
+                }
+            }
+        }
+        return res;
+    }
+
+
+    vector<Polynomial> parse_equations_from_file(const string& file_name, bool change_names=false) {
         ifstream fin;
         fin.open(file_name);
         string s;
@@ -957,6 +995,9 @@ namespace F2Pol {
             auto end_var_name = [&]() {
                 if (cur_var_name.size() == 0) {
                     return;
+                }
+                if (change_names) {
+                    cur_var_name = change_name(cur_var_name);
                 }
                 if (parsed_vars.find(cur_var_name) == parsed_vars.end()) {
                     parsed_vars[cur_var_name] = add_variable(cur_var_name);
@@ -1003,21 +1044,65 @@ void print_equations_for_sat(const vector<F2Pol::Polynomial>& equations) {
 }
 
 
-vector<vector<int> > read_solutions_from_file(const string& file_name, int num_variables) {
+const int inf = (int)1e9 + 1;
+int to_int(const string& s) {
+    int z = 1, val = 0, st = 0;
+    if ((int)s.size() > 0 && s[0] == '-') {
+        z = -1;
+        st = 1;
+    }
+    if (st >= s.size()) {
+        return -inf;
+    }
+    for (int i = st; i < s.size(); i++) {
+        if (!(s[i] >= '0' && s[i] <= '9')) {
+            return -inf;
+        }
+        val = val * 10 + (s[i] - '0');
+    }
+    return z * val;
+}
+
+
+vector<vector<int> > parse_solutions_from_sat(const string& file_name, int num_variables) {
     ifstream fin;
     fin.open(file_name);
     vector<vector<int> > solutions;
-    int tmp;
+    vector<int> solution;
+    string tmp;
     while (fin >> tmp) {
-        solutions.emplace_back(vector<int> ());
-        solutions.back().push_back(tmp);
-        for (int i = 0; i < num_variables - 1; i++) {
-            fin >> tmp;
-            solutions.back().push_back(tmp);
+        if (tmp == "s" || tmp == "v" || tmp == "SATISFIABLE" || tmp == "UNSATISFIABLE") {
+            continue;
+        } else {
+            int val = to_int(tmp);
+            if (val == 0) {
+                solution.resize(num_variables);
+                solutions.push_back(solution);
+                solution.clear();
+            } else {
+                solution.push_back(val > 0 ? 1 : 0);
+            }
         }
     }
     return solutions;
 }
+
+
+//vector<vector<int> > read_solutions_from_file(const string& file_name, int num_variables) {
+//    ifstream fin;
+//    fin.open(file_name);
+//    vector<vector<int> > solutions;
+//    int tmp;
+//    while (fin >> tmp) {
+//        solutions.emplace_back(vector<int> ());
+//        solutions.back().push_back(tmp);
+//        for (int i = 0; i < num_variables - 1; i++) {
+//            fin >> tmp;
+//            solutions.back().push_back(tmp);
+//        }
+//    }
+//    return solutions;
+//}
 
 
 void XL_attack(vector<F2Pol::Polynomial> equations) {
@@ -1080,13 +1165,29 @@ void XL_attack(vector<F2Pol::Polynomial> equations) {
 }
 
 
+void SAT_attack(const vector<F2Pol::Polynomial>& equations) {
+
+    print_equations_for_sat(equations);
+
+
+    vector<int> vars = F2Pol::get_all_equation_vars(equations);
+    vector<vector<int> > solutions = parse_solutions_from_sat("sat_solutions.txt", vars.size());
+
+    cout << "Solutions:\n";
+    for (int i1 = 0; i1 < solutions.size(); i1++) {
+        cout << "Solution: #" << i1 + 1 << "\n";
+        for (int j1 = 0; j1 < vars.size(); j1++) {
+            cout << *F2Pol::all_vars[vars[j1]] << " " << solutions[i1][j1] << "\n";
+        }
+    }
+}
+
+
 int main() {
     // for Simon
-    vector<F2Pol::Polynomial> equations = F2Pol::get_equations(false);
+    // vector<F2Pol::Polynomial> equations = F2Pol::get_equations(false);
     // for Speck
-    // vector<F2Pol::Polynomial> equations = F2Pol::parse_equations_from_file("speck.txt");
-
-    XL_attack(equations);
+    vector<F2Pol::Polynomial> equations = F2Pol::parse_equations_from_file("speck.txt", true);
 
     return 0;
 }
